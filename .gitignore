@@ -1,3 +1,6 @@
+# Temporary files
+CollideDataProcessing.ipynb
+
 # Binary data files
 *.pt
 *.pkl

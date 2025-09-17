@@ -1,21 +1,34 @@
 name: mlLearningEnv
 
 channels:
+  - huggingface
   - conda-forge
 
 dependencies:
   # The basics
   - python=3.12
   - numpy=1.26
+  - pandas=2.2
+  - awkward=2.7
+  - awkward-cpp
   - matplotlib=3.9
-  - scipy
+  - scipy=1.15
+  - pyarrow
   - pip
+  - ipykernel
+  - ipywidgets
+  - tqdm
+  - yaml
 
   # Physics
-  - vector
+  - vector=1.6
+  - hist
 
   # Machine learning
+  - datasets # huggingface datasets
   - scikit-learn
+  - xgboost
+  - tensorboard
 
   - pip:
     - --index-url https://download.pytorch.org/whl/cu126
