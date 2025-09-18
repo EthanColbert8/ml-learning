@@ -42,12 +42,10 @@ def GetLeptonCharge(gen_particles_3d, gen_particles_PID, electrons, muons):
     gen_electrons_pid = gen_particles_PID[gen_electron_pid_mask]
     gen_muons_pid = gen_particles_PID[gen_muon_pid_mask]
 
-    
+    electrons_deltaR = electrons[:,:,None].deltaR(gen_electrons_3d[:,None,:])
+    muons_deltaR = muons[:,:,None].deltaR(gen_muons_3d[:,None,:])
 
-    electrons_deltaR = electrons_real[:,:,None].deltaR(gen_electrons_3d[:,None,:])
-    muons_deltaR = muons_real[:,:,None].deltaR(gen_muons_3d[:,None,:])
-
-    elecrons_match_idx = ak.argmin(ak.values_astype(electrons_deltaR, np.float32), axis=-1, mask_identity=False)
+    electrons_match_idx = ak.argmin(ak.values_astype(electrons_deltaR, np.float32), axis=-1, mask_identity=False)
     muons_match_idx = ak.argmin(ak.values_astype(muons_deltaR, np.float32), axis=-1, mask_identity=False)
 
     event_level_mask = ~(ak.any(electrons_match_idx == -1, axis=-1) | ak.any(muons_match_idx == -1, axis=-1))
@@ -104,7 +102,7 @@ if (__name__ == "__main__"):
         if not data_file.endswith(".parquet"):
             continue
         data_path = os.path.join(data_dir, data_file)
-        data_array = ak.from_parquet(data_path, columns=columns_to_load)
+        data_array = ak.values_astype(ak.from_parquet(data_path, columns=columns_to_load), np.float32)
 
         gen_particles_3d = vector.Array(ak.zip({
             "pt": data_array['FullReco_GenPart_PT'],
@@ -146,10 +144,15 @@ if (__name__ == "__main__"):
         leptons = leptons[event_mask_2]
         lbars = lbars[event_mask_2]
 
-        lepton_cut = leptons.pt == ak.max(ak.values_astype(leptons.pt, np.float32), axis=1, mask_identity=False)
-        lbar_cut = lbars.pt == ak.max(ak.values_astype(lbars.pt, np.float32), axis=1, mask_identity=False)
-        lepton = vector.MomentumNumpy4D(ak.to_regular(leptons[lepton_cut]).to_numpy().squeeze())
-        lbar = vector.MomentumNumpy4D(ak.to_regular(lbars[lbar_cut]).to_numpy().squeeze())
+        # lepton_cut = leptons.pt == ak.max(ak.values_astype(leptons.pt, np.float32), axis=1, mask_identity=False)
+        # lbar_cut = lbars.pt == ak.max(ak.values_astype(lbars.pt, np.float32), axis=1, mask_identity=False)
+        lepton_cut = leptons.pt == ak.max(leptons.pt, axis=1, mask_identity=False)
+        lbar_cut = lbars.pt == ak.max(lbars.pt, axis=1, mask_identity=False)
+
+        #lepton = vector.MomentumNumpy4D(ak.to_regular(leptons[lepton_cut]).to_numpy().squeeze())
+        #lbar = vector.MomentumNumpy4D(ak.to_regular(lbars[lbar_cut]).to_numpy().squeeze())
+        lepton = vector.MomentumNumpy4D(leptons[lepton_cut][:,0].to_numpy().squeeze())
+        lbar = vector.MomentumNumpy4D(lbars[lbar_cut][:,0].to_numpy().squeeze())
 
         # Define gen tops, MET, and jets
         gen_tops_mask = ((np.abs(gen_particles_PID) == 6) & (data_array['FullReco_GenPart_Status'] == 62))
@@ -184,6 +187,9 @@ if (__name__ == "__main__"):
             "mass": ak.values_astype(data_array['FullReco_JetPuppiAK4_Mass'], np.float32),
         }))
         jets_btag = ak.values_astype(data_array['FullReco_JetPuppiAK4_BTag'], np.float32)
+
+        # lepton_energy = np.sqrt(lepton.mag2 + lepton.M2)
+        # lbar_energy = np.sqrt(lbar.mag2 + lbar.M2)
 
         # Append model inputs to lists. This includes adding charge info to leptons.
         lepton_list.append(np.column_stack([lepton.px, lepton.py, lepton.pz, lepton.E, (-1 + np.zeros(len(lepton)))]).astype(np.float32))
